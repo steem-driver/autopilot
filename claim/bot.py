@@ -21,7 +21,6 @@ class ClaimBot:
         delegations = self.claimer_account.incoming_delegations()
         for delegation in delegations:
             vesting_shares = float(delegation["vesting_shares"]["amount"])
-            print ("amount", vesting_shares)
             if vesting_shares > MINIMUM_SP_DELEGATION:
                 users.append(delegation["delegator"])
         return users
