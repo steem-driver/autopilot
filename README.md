@@ -9,7 +9,7 @@ Image Source: [Wikipedia - Autonomous Car](https://en.wikipedia.org/wiki/Autonom
 
 ### Current Features
 
-1. Automatically claim the SCOT tokens (PAL, SCT, ZZAN, etc.) for the users of this service every 2 hours
+1. Automatically claim the SCOT tokens (PAL, SCT, ZZAN, etc.) for the users of this service every hour
 
 
 ### How to Use
