@@ -25,7 +25,7 @@ In order to register for autopilot,
 
 ### Future Plan
 
-- We may support more "autopilot" features for the users in the future, such as a smarter vote bot for Steem Engine communities, alert for token price trends, etc.
+- We may support more "autopilot" features for the users in the future, such as a smarter vote bot for SCOT communities and applications, alert for token price trends / patterns, etc.
 
 
 - - -
