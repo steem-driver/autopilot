@@ -2,8 +2,13 @@
 
 **Autopilot** is a automated bot that aims at easing your daily life at Steem and Steem Engine.
 
+<center>
+
 ![Autonomous Car](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Tesla_Autopilot_Engaged_in_Model_X.jpg/1920px-Tesla_Autopilot_Engaged_in_Model_X.jpg)
+
 Image Source: [Wikipedia - Autonomous Car](https://en.wikipedia.org/wiki/Autonomous_car) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+
+</center>
 
 
 ### Current Features
