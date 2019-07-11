@@ -1,0 +1,25 @@
+[[source]]
+name = "pypi.ustc"
+url = "https://pypi.mirrors.ustc.edu.cn/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pandas = "*"
+invoke = "*"
+beem = "*"
+bs4 = "*"
+markdown = "*"
+unicodecsv = "*"
+lxml = "*"
+zmail = "*"
+requests = {extras = ["security"],version = "*"}
+certifi = "*"
+pymongo = {extras = ["tls"],version = "*"}
+dnspython = "*"
+langdetect = "*"
+matplotlib = "*"
+
+[requires]
+python_version = "3.7"
