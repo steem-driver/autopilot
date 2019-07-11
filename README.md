@@ -17,7 +17,8 @@ Image Source: [Wikipedia - Autonomous Car](https://en.wikipedia.org/wiki/Autonom
 In order to register for autopilot,
 
 1. Authorize @self-driving account with steemconnect [https://steemconnect.com/authorize/@self-driving](https://steemconnect.com/authorize/@self-driving) to grant the posting authority. You can check whether you did this successfully in `Authorities` section in [https://steemd.com/@{your_account}](https://steemd.com/@{your_account})
-1. Delegate at least 2 SP to @self-driving account, so it knows you want to enable the service. The delegation tool such as [https://steemyy.com/sp-delegate-form/](https://steemyy.com/sp-delegate-form/) can be used for the delegation. We'll cancel the needs for delegation after this service gets mature, and you can undelegate the SP then.
+1. Delegate at least 2 SP to @self-driving account as a service registration step, so autopilot knows you want to enable the service. The delegation tool such as [https://steemyy.com/sp-delegate-form/](https://steemyy.com/sp-delegate-form/) can be used for the delegation. We need this delegation step because we don't have a decent UI for this service yet. We'll cancel the needs for delegation after this service gets mature, and you can undelegate the SP then.
+
 
 ### Future Plan
 
