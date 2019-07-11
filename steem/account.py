@@ -76,3 +76,11 @@ class SteemAccount:
         cost_per_comment = self._get_rc().comment()
         number_of_comments = self.max_rc_mana() * 0.2 / cost_per_comment
         return number_of_comments
+
+    def incoming_delegations(self):
+        operations = self.account.history(only_ops=["delegate_vesting_shares",])
+        delegations = {}
+        for operation in operations:
+            if self.author == operation["delegatee"]:
+                delegations[operation["delegator"]] = operation
+        return delegations.values()

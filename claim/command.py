@@ -39,3 +39,16 @@ def all_tokens(ctx, account, debug=False):
 
     bot = ClaimBot()
     bot.claim_all_scot_tokens(account)
+
+
+@task(help={
+      'debug': 'enable the debug mode'
+      })
+def all_users(ctx, debug=False):
+    """ claim all the tokens of all accounts"""
+
+    settings.set_steem_node()
+
+    bot = ClaimBot()
+    bot.claim_all_accounts()
+
