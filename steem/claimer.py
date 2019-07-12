@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import json
+import traceback
 from steem.scot import author as scot_author
 from steem.settings import settings
 from utils.logging.logger import logger
@@ -45,8 +46,11 @@ class Claimer:
         amount = self.get_scot_token_pending_amount(token)
         if amount and amount > 0:
             body = {"symbol": token}
-            self.steem.custom_json("scot_claim_token", json.dumps(body), required_posting_auths=[self.author])
             amount = float(amount) / 1000
-            logger.info("@{} has claimed {} {} token successfully".format(self.author, amount, token))
+            try:
+                self.steem.custom_json("scot_claim_token", json.dumps(body), required_posting_auths=[self.author])
+                logger.info("@{} has claimed {} {} token successfully".format(self.author, amount, token))
+            except:
+                logger.error("Failed when @{} was claiming {} {} token.\nError: {}".format(self.author, amount, token, traceback.format_exc()))
         else:
             logger.info("@{} has no {} token to claim.".format(self.author, token))
