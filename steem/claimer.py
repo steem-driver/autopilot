@@ -37,8 +37,18 @@ class Claimer:
     def claim_all_scot_tokens(self):
         tokens = self.get_pending_scot_tokens()
         if tokens and len(tokens) > 0:
+            body = []
             for token in tokens:
-                self.claim_scot_token(token)
+                amount = self.get_scot_token_pending_amount(token)
+                if amount and amount > 0:
+                    body.append({"symbol": token})
+                    amount = float(amount) / 1000
+                    logger.info("@{} will claim {} {} token".format(self.author, amount, token))
+            try:
+                self.steem.custom_json("scot_claim_token", json.dumps(body), required_posting_auths=[self.author])
+                logger.info("@{} has claimed all tokens successfully".format(self.author))
+            except:
+                logger.error("Failed when @{} was claiming all token.\nError: {}".format(self.author, traceback.format_exc()))
         else:
             logger.info("@{} has no tokens to claim.".format(self.author))
 
