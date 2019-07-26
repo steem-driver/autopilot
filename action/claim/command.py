@@ -5,7 +5,7 @@ from invoke import task
 from steem.settings import settings
 from utils.logging.logger import logger
 
-from claim.bot import ClaimBot
+from action.claim.bot import ClaimBot
 
 
 @task(help={

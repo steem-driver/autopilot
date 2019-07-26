@@ -16,7 +16,7 @@ from utils.network.mail import Mail
 from utils.logging.logger import logger
 
 
-class SteemReader:
+class CommentReader:
 
     def __init__(self, tag="cn", account=None, keyword=None, limit=None, days=None):
         self.posts = []
@@ -37,6 +37,8 @@ class SteemReader:
         first_tag = self.tags[0] if self.tags else self.tag
         self.folder = ".items/{}".format(first_tag or "by_account")
         self.filename = None
+
+        self.blockchain = Blockchain(mode="head", steem_instance = stm)
 
     def is_recent(self, post, days):
         return in_recent_days(post['created'], days)
@@ -73,11 +75,14 @@ class SteemReader:
         else:
             return get_posts(tag=self.tag, account=self.account, keyword=self.keyword, limit=self.limit, days=self.days)
 
-    def get_latest_posts(self):
+    def query(self):
         posts = self._read_posts()
         self.posts = [post for post in posts if self.is_qualified(post)]
         print ("{} posts to review".format(len(self.posts)))
         return self.posts
+
+    def stream(self):
+
 
     def _get_time_str(self):
         str_time, timestamp = get_cn_time_str()

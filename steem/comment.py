@@ -9,6 +9,7 @@ from markdown import markdown
 from beem import Steem
 from beem.comment import Comment
 from beem.exceptions import ContentDoesNotExistsException
+from beem.utils import construct_authorperm
 
 from steem.settings import STEEM_HOST
 from utils.logging.logger import logger
@@ -19,14 +20,18 @@ REGEX_IMAGE_URL = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}
 
 class SteemComment:
 
-    def __init__(self, comment=None, author_perm=None, url=None):
+    def __init__(self, comment=None, author_perm=None, url=None, ops=None):
         self.comment = comment
         self.author_perm = author_perm
         self.url = url
+        self.ops = ops
 
     def get_author_perm(self):
         if self.author_perm is None:
-            self.author_perm = "/".join(self.url.split("/")[-2:])
+            if self.url is not None:
+                self.author_perm = "/".join(self.url.split("/")[-2:])
+            elif self.ops is not None:
+                self.author_perm = construct_authorperm(self.ops)
         return self.author_perm
 
     def get_comment(self):
