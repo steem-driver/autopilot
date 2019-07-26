@@ -29,7 +29,7 @@ class SteemOperation:
 
     def get_author_perm(self):
         if self.author_perm is None:
-            return construct_authorperm(self.ops)
+            self.author_perm = construct_authorperm(self.ops)
         return self.author_perm
 
     def get_comment(self):
@@ -42,15 +42,8 @@ class SteemOperation:
 
     def get_url(self):
         if self.url is None:
-            if self.author_perm:
-                self.url = u"{}/{}".format(STEEM_HOST, self.author_perm)
-            else:
-                c = self.get_comment()
-                if c.authorperm:
-                    self.url = u"{}/{}".format(STEEM_HOST, c.authorperm)
-                else:
-                    self.url = u"{}/@{}/{}".format(STEEM_HOST, c.author, c.permlink)
-
+            if self.get_author_perm():
+                self.url = u"{}/{}".format(STEEM_HOST, self.get_author_perm())
         return self.url
 
     def get_text_body(self):
@@ -96,3 +89,20 @@ class SteemOperation:
     def log(self):
         pass
 
+    def body(self):
+        return self.ops['body']
+
+    def author(self):
+        return self.ops['author']
+
+    def parent_author(self):
+        if 'parent_author' in self.ops:
+            return self.ops['parent_author']
+        else:
+            return None
+
+    def get_parent_author_perm(self):
+        if 'parent_author' in self.ops and 'parent_permlink' in self.ops:
+            return "@{}/{}".format(self.ops['parent_author'], self.ops['parent_permlink'])
+        else:
+            return None

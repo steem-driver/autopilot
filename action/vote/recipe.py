@@ -28,7 +28,7 @@ class VoteRecipe:
 
     def context(self, ops):
         self.ops = SteemOperation(ops=ops)
-        logger.info("watch comment: {}; tags: {}".format(self.ops.get_url(), self.ops.get_tags()))
+        logger.debug("watch comment: {}; tags: {}".format(self.ops.get_url(), self.ops.get_tags()))
 
     def run(self):
         self.bot.context(self.context).what(self.what_to_vote).who(self.who_to_vote).when(self.when_to_vote).how(self.how_to_vote).run()
