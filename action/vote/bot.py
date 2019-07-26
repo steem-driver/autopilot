@@ -107,13 +107,19 @@ class VoteBot:
         self.how_to_vote = how_to_vote
         return self
 
+    def context(self, ctx):
+        self.ctx = ctx
+        return self
+
     def weight(self, post):
         return self.how_to_vote(post)
 
     def watch(self, ops):
-        c = SteemComment(ops=ops)
-        author = c.get_comment().author
-        if self.what_to_vote(c) and self.who_to_vote(author):
+        author = ops['author']
+
+        self.ctx(ops)
+        if self.what_to_vote(ops) and self.who_to_vote(author):
+            c = SteemComment(ops=ops)
             self.vote(post=c.get_comment())
 
     def run(self):
