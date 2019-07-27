@@ -3,6 +3,7 @@
 from utils.logging.logger import logger
 
 import os
+from threading import Timer
 
 from steem.settings import settings
 from steem.comment import SteemComment
@@ -117,10 +118,18 @@ class VoteBot:
     def watch(self, ops):
         author = ops['author']
 
-        self.ctx(ops)
-        if self.what_to_vote(ops) and self.who_to_vote(author):
+        def perform_vote():
             c = SteemComment(ops=ops)
             self.vote(post=c.get_comment())
+
+        self.ctx(ops)
+        if self.what_to_vote(ops) and self.who_to_vote(author):
+            delay = self.when_to_vote(ops) # mins
+            if delay and delay >= 0:
+                secs = 60.0 * delay
+                logger.info("I'll vote after {} seconds".format(secs))
+                t = Timer(secs, perform_vote)
+                t.start()
 
     def run(self):
         self.stream.run(callback=self.watch)
