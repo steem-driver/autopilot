@@ -75,7 +75,7 @@ class SteemOperation:
                     else:
                         return [tags]
                 else:
-                    logger.error("not well formatted metadata: ".format(metadata))
+                    logger.error("not well formatted metadata: ".format(self.ops['json_metadata']))
         return []
 
     def has_tag(self, tag):

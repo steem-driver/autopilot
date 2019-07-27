@@ -3,7 +3,7 @@
 from beem.account import Account
 from beem.rc import RC as ResourceCredits
 from utils.system.date import from_then
-from steem.scot import author as scot_author, token_info as scot_token_info
+from steem.scot import author as scot_author, token_info as scot_token_info, token_config as scot_token_config
 
 
 class SteemAccount:
@@ -107,19 +107,53 @@ class SteemAccount:
     def get_scot_staked(self, symbol):
         return self.get_scot_info(symbol, "staked_tokens")
 
-    def get_vote_pct_for_token(self, symbol, value):
+    def get_vote_multiplier(self, symbol, up=True):
+       return self.get_scot_info(symbol, 'vote_weight_multiplier') if up else get_scot_info(symbol, 'downvote_weight_multiplier')
+
+    def estimate_vote_value_for_token(self, symbol, weight=100, up=True):
         token_voting_power = self.get_scot_voting_power(symbol)
         scot_staked = self.get_scot_staked(symbol)
         pending_rshares = scot_token_info(symbol, "pending_rshares")
         reward_pool = scot_token_info(symbol, "reward_pool")
+        precision = scot_token_info(symbol, "precision")
+        author_curve_exponent = scot_token_config(symbol, "author_curve_exponent")
+        multiplier = self.get_vote_multiplier(symbol, up)
 
-        # print ("get_vote_pct_for_token", token_voting_power, scot_staked, pending_rshares, reward_pool)
+        # print ("estimate_vote_value", token_voting_power, scot_staked, pending_rshares, reward_pool, author_curve_exponent, multiplier)
 
-        if token_voting_power and scot_staked and pending_rshares and reward_pool:
+        def apply_reward_curve(rshares):
+            return pow(max(0, rshares), author_curve_exponent) * reward_pool / pending_rshares
+
+        direction = 1 if up else - 1
+        rshares = float(up) * float(scot_staked) * min(abs(multiplier * weight), 100) * float(token_voting_power) / (10000 * 100);
+        # newValue = apply_reward_curve(voteRshares + rshares);
+        # print ("reshares", rshares)
+        value = apply_reward_curve(rshares)
+        return round(value / pow(10, precision), precision)
+
+    def estimate_vote_pct_for_token(self, symbol, value):
+        token_voting_power = self.get_scot_voting_power(symbol)
+        scot_staked = self.get_scot_staked(symbol)
+        pending_rshares = scot_token_info(symbol, "pending_rshares")
+        reward_pool = scot_token_info(symbol, "reward_pool")
+        precision = scot_token_info(symbol, "precision")
+        author_curve_exponent = scot_token_config(symbol, "author_curve_exponent")
+        up = True if value >= 0 else False
+        multiplier = self.get_vote_multiplier(symbol, up)
+
+        # print ("get_vote_pct_for_token", token_voting_power, scot_staked, pending_rshares, reward_pool, author_curve_exponent, multiplier)
+
+        def get_rshares_from_reward(reward):
+            return pow(pending_rshares * reward / reward_pool, 1.0 / author_curve_exponent)
+
+        if token_voting_power and scot_staked and pending_rshares and reward_pool and author_curve_exponent and multiplier:
             # calculation method
             # vote_value = vote_weight / 100 * voting_power / 100 * rshares / pending_rshares * reward_pool
             # reference: https://busy.org/@holger80/palnet-how-to-check-your-voting-power-and-your-pal-vote-value
-            vote_weight = 100.0 * 100.0 * float(value) / float(token_voting_power) / float(scot_staked / 1000.0) * float(pending_rshares) / float(reward_pool)
+            value = value * pow(10, precision)
+            rshares = get_rshares_from_reward(value)
+            # print ("reshares", rshares)
+            vote_weight = 10000.0 * rshares / float(token_voting_power) / float(scot_staked / 100.0) / multiplier
             return vote_weight
         else:
             return None
