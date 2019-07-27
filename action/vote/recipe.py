@@ -7,7 +7,8 @@ from utils.logging.logger import logger
 class VoteRecipe:
 
     def __init__(self):
-        self.bot = VoteBot(author=self.by())
+        self.voter = self.by()
+        self.bot = VoteBot(author=self.voter)
         self.ops = None
         self.ctx = {}
 

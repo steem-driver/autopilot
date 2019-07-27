@@ -68,11 +68,14 @@ class SteemOperation:
         if 'json_metadata' in self.ops and len(self.ops['json_metadata']) > 0:
             metadata = json.loads(self.ops['json_metadata'])
             if 'tags' in metadata:
-                tags = metadata['tags']
-                if isinstance(tags, list):
-                    return tags
+                if isinstance(metadata, dict):
+                    tags = metadata['tags']
+                    if isinstance(tags, list):
+                        return tags
+                    else:
+                        return [tags]
                 else:
-                    return [tags]
+                    logger.error("not well formatted metadata: ".format(metadata))
         return []
 
     def has_tag(self, tag):
@@ -106,3 +109,6 @@ class SteemOperation:
             return "@{}/{}".format(self.ops['parent_author'], self.ops['parent_permlink'])
         else:
             return None
+
+    def get_block_num(self):
+        return self.ops['block_num']

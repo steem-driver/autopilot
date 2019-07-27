@@ -24,21 +24,24 @@ class SteemStream:
         self.max_batch_size = 50
         self.threading = False
 
-    def run(self, callback=default_callback, lookback=0):
-        if lookback > 0:
+    def run(self, callback=default_callback, lookback=0, start=-1):
+        if lookback > 0 or start > 0:
             if self.last_streamed_block == 0:
-                start_block = self.blockchain.get_current_block_num() - int(lookback) #200000
+                if start > 0:
+                    start_block = start
+                else:
+                    start_block = self.blockchain.get_current_block_num() - int(lookback) #200000
             else:
                 start_block = self.last_streamed_block + 1
             stop_block = self.blockchain.get_current_block_num()
 
-            logger.info("Streaming for operations {} has started for {} to {}".format(self.operations, start_block, stop_block))
+            logger.info("Streaming for operations {} has started from block {} to {}".format(self.operations, start_block, stop_block))
             for ops in self.blockchain.stream(opNames=self.operations,
                         start=start_block, stop=stop_block,
                         max_batch_size=self.max_batch_size, threading=self.threading, thread_num=8):
                 callback(ops)
         else:
-            logger.info("Streaming for operations {} has started the latest blocks".format(self.operations))
+            logger.info("Streaming for operations {} has started from the latest blocks".format(self.operations))
             for ops in self.blockchain.stream(opNames=self.operations,
                         max_batch_size=self.max_batch_size, threading=self.threading, thread_num=8):
                 callback(ops)

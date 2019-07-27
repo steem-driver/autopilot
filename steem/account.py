@@ -3,6 +3,7 @@
 from beem.account import Account
 from beem.rc import RC as ResourceCredits
 from utils.system.date import from_then
+from steem.scot import author as scot_author, token_info as scot_token_info
 
 
 class SteemAccount:
@@ -11,6 +12,7 @@ class SteemAccount:
         self.author = author
         self.account = Account(self.author)
         self.rc = None
+        self.scot_info = None
 
     def get_profile(self, key=None):
         profile = self.account.profile
@@ -84,3 +86,40 @@ class SteemAccount:
             if self.author == operation["delegatee"]:
                 delegations[operation["delegator"]] = operation
         return delegations.values()
+
+    def get_scot_info(self, symbol=None, key=None):
+        if self.scot_info is None:
+            self.scot_info = scot_author(self.author)
+            if self.scot_info is None:
+                return None
+        if symbol is None:
+            return self.scot_info
+        else:
+            if symbol in self.scot_info:
+                token_info = self.scot_info[symbol]
+                if key is not None and key in token_info:
+                    return token_info[key]
+        return None
+
+    def get_scot_voting_power(self, symbol):
+        return self.get_scot_info(symbol, 'voting_power')
+
+    def get_scot_staked(self, symbol):
+        return self.get_scot_info(symbol, "staked_tokens")
+
+    def get_vote_pct_for_token(self, symbol, value):
+        token_voting_power = self.get_scot_voting_power(symbol)
+        scot_staked = self.get_scot_staked(symbol)
+        pending_rshares = scot_token_info(symbol, "pending_rshares")
+        reward_pool = scot_token_info(symbol, "reward_pool")
+
+        # print ("get_vote_pct_for_token", token_voting_power, scot_staked, pending_rshares, reward_pool)
+
+        if token_voting_power and scot_staked and pending_rshares and reward_pool:
+            # calculation method
+            # vote_value = vote_weight / 100 * voting_power / 100 * rshares / pending_rshares * reward_pool
+            # reference: https://busy.org/@holger80/palnet-how-to-check-your-voting-power-and-your-pal-vote-value
+            vote_weight = 100.0 * 100.0 * float(value) / float(token_voting_power) / float(scot_staked / 1000.0) * float(pending_rshares) / float(reward_pool)
+            return vote_weight
+        else:
+            return None
