@@ -2,7 +2,7 @@
 
 from invoke import task
 
-from steem.account import SteemAccount
+from steem.voter import Voter
 from steem.settings import settings
 from utils.logging.logger import logger
 
@@ -38,7 +38,7 @@ def estimate_value(ctx, account, token, weight=100, debug=False):
         settings.set_debug_mode()
     settings.set_steem_node()
 
-    print (SteemAccount(account).estimate_vote_value_for_token(token, weight))
+    print (Voter(account).estimate_vote_value_for_token(token, weight))
 
 
 @task(help={
@@ -54,7 +54,7 @@ def estimate_weight(ctx, account, token, value, debug=False):
         settings.set_debug_mode()
     settings.set_steem_node()
 
-    weight = SteemAccount(account).estimate_vote_pct_for_token(token, float(value))
+    weight = Voter(account).estimate_vote_pct_for_token(token, float(value))
     print ("{}%".format(round(weight, 2)))
 
 

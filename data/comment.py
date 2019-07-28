@@ -82,7 +82,7 @@ class CommentReader:
         return self.posts
 
     def stream(self):
-
+        pass
 
     def _get_time_str(self):
         str_time, timestamp = get_cn_time_str()

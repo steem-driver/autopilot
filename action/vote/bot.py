@@ -31,6 +31,7 @@ class VoteBot:
         self.who_to_vote = lambda : True
         self.when_to_vote = lambda : 15
         self.how_to_vote = lambda : 50
+        self.is_ready = lambda: True
 
     def _has_reply_comment(self, receiver, message_id):
         comments = self._read_comments()
@@ -108,6 +109,11 @@ class VoteBot:
         self.how_to_vote = how_to_vote
         return self
 
+    def ready(self, is_ready):
+        """ define voter has met energy or other requirements """
+        self.is_ready = is_ready
+        return self
+
     def context(self, ctx):
         self.ctx = ctx
         return self
@@ -123,7 +129,7 @@ class VoteBot:
             self.vote(post=c.get_comment())
 
         self.ctx(ops)
-        if self.what_to_vote(ops) and self.who_to_vote(author):
+        if self.what_to_vote(ops) and self.who_to_vote(author) and self.is_ready():
             delay = self.when_to_vote(ops) # mins
             if delay and delay >= 0:
                 secs = 60.0 * delay
@@ -133,9 +139,3 @@ class VoteBot:
 
     def run(self):
         self.stream.run(callback=self.watch)
-
-    def check_mana(self):
-        return True
-
-    def check_voting_power(self):
-        return True
