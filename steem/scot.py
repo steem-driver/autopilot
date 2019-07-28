@@ -9,7 +9,9 @@ SCOT_API_URL = "https://scot-api.steem-engine.com/{}"
 
 cached = {
     "token_info": {},
-    "token_config": {}
+    "token_config": {},
+    "author": {},
+    "comment": {}
 }
 
 def _http_api(path):
@@ -19,13 +21,26 @@ def _http_api(path):
     else:
         return None
 
+def _entity_data(key, entity):
+    if entity is not None:
+        if entity in cached[key]:
+            info = cached[key][entity]
+            if time.time() < info['expiration']:
+                return info['data']
+        info = {}
+        info['data'] = _http_api(entity)
+        info['expiration'] = time.time() + 60 * 1 # minutes
+        cached[key][entity] = info
+        return info['data']
+    return None
+
 def author(author):
-    return _http_api("@"+author)
+    return _entity_data("author", "@"+author)
 
 def comment(author, permlink):
-    return _http_api("@"+author+"/"+permlink)
+    return _entity_data("comment", "@"+author+"/"+permlink)
 
-def token_data(key, symbol):
+def _token_data(key, symbol):
     if symbol is not None:
         cached_key = 'token_{}'.format(key)
         if symbol in cached[cached_key]:
@@ -39,8 +54,8 @@ def token_data(key, symbol):
         return info['data']
     return None
 
-def token_item(key, symbol, item):
-    data = token_data(key, symbol)
+def _token_item(key, symbol, item):
+    data = _token_data(key, symbol)
     if data is not None:
         if item is not None:
             if item in data:
@@ -50,7 +65,7 @@ def token_item(key, symbol, item):
     return None
 
 def token_info(symbol, item=None):
-    return token_item("info", symbol, item)
+    return _token_item("info", symbol, item)
 
 def token_config(symbol, item=None):
-    return token_item("config", symbol, item)
+    return _token_item("config", symbol, item)

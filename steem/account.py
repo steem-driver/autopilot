@@ -88,10 +88,9 @@ class SteemAccount:
         return delegations.values()
 
     def get_scot_info(self, symbol=None, key=None):
+        self.scot_info = scot_author(self.author)
         if self.scot_info is None:
-            self.scot_info = scot_author(self.author)
-            if self.scot_info is None:
-                return None
+            return None
         if symbol is None:
             return self.scot_info
         else:
