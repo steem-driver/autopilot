@@ -85,12 +85,13 @@ class VoteBot:
 
         if not c.is_upvoted_by(self.author):
             weight = weight or self.weight(c)
-            self.voter.upvote(c.get_comment(), weight=weight)
-            logger.info("I have upvoted @{}'s post [{}] successfully".format(receiver, title))
-            return True
+            success = self.voter.upvote(c.get_comment(), weight=weight)
+            if success:
+                logger.info("I have upvoted @{}'s post [{}] successfully".format(receiver, title))
+                return True
         else:
             logger.info("Skip upvote @{} because I already upvoted his/her post [{}]".format(receiver, title))
-            return False
+        return False
 
     def what(self, what_to_vote):
         """ define the condition of vote for a post """

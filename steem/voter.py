@@ -14,11 +14,13 @@ class Voter:
 
     def upvote(self, post, weight=100):
         if post:
-            if weight >= -100 and weight <= 100:
+            if weight and weight >= -100 and weight <= 100:
                 post.upvote(weight=weight, voter=self.author)
                 logger.info("Voted to [{}] successfully".format(post.title))
+                return True
             else:
                 logger.error("Failed: the vote weight {} exceeds the range [-100, 100]".format(weight))
+        return False
 
     def estimate_vote_value_for_token(self, symbol, weight=100, up=True):
         token_voting_power = self.account.get_scot_voting_power(symbol)
