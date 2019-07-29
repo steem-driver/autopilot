@@ -3,10 +3,11 @@
 import pandas as pd
 import traceback
 import json
+import types
 
 from beem.account import Account
 from beem.comment import Comment
-from beem.discussions import Query, Discussions_by_created
+from beem.discussions import Query, Discussions_by_created, Comment_discussions_by_payout
 
 from steem.comment import SteemComment
 from steem.settings import settings
@@ -16,14 +17,34 @@ from utils.system.date import in_recent_days
 LIMIT_THRESHOLD = 100
 
 
+def query(q={}):
+    mode = q.get("mode", "post")
+    account = q.get("account", None)
+    tag = q.get("tag", None)
+    keyword = q.get("keyword", None)
+    limit = q.get("limit", None)
+    days = q.get("days", None)
+    receiver = q.get("receiver", None)
+
+    if mode == "post":
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days)
+    elif mode == "comment":
+        return get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days)
+    elif "post" in mode and "comment" in mode:
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days)
+    return []
+
 def get_posts(account=None, tag=None, keyword=None, limit=None, days=None):
     if account:
         return SteemPostsByAccount(account=account, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
     elif tag and not account:
         return SteemPostsByTag(tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
 
-def get_comments(account=None, receiver=None, limit=None, days=None):
-    return SteemCommentsByAccount(account=account, receiver=receiver, limit=limit, days=days).read_comments()
+def get_comments(account=None, tag=None, receiver=None, limit=None, days=None):
+    if account:
+        return SteemCommentsByAccount(account=account, receiver=receiver, limit=limit, days=days).read_comments()
+    elif tag and not account:
+        return SteemPostsByTag(tag=tag, keyword=None, limit=limit, days=days, mode="comment").read_posts()
 
 def in_recent_n_days(post, n):
     return in_recent_days(post['created'], n)
@@ -78,11 +99,12 @@ class SteemPostsByAccount:
 
 class SteemPostsByTag:
 
-    def __init__(self, tag, keyword=None, limit=None, days=None):
+    def __init__(self, tag, keyword=None, limit=None, days=None, mode="post"):
         self.tag = tag
         self.keyword = keyword #and keyword.decode('utf-8')
         self.limit = int(limit) if limit else None
         self.days = float(days) if days else None
+        self.mode = mode or "post"
 
     def read_posts(self):
         posts = []
@@ -138,15 +160,30 @@ class SteemPostsByTag:
         else:
             q = Query(limit=limit, tag=self.tag)
 
-        blogs = Discussions_by_created(q)
-        logger.info ('reading posts: {}'.format(len(blogs)))
+        if self.mode == "comment":
+            blogs = Comment_discussions_by_payout(q)
+        else:
+            blogs = Discussions_by_created(q)
+
+        if isinstance(blogs, types.GeneratorType):
+            logger.info("reading posts...")
+        else:
+            logger.info ('reading posts: {}'.format(len(blogs)))
 
         c_list = {}
         days_done = False
         for c in blogs:
             if c.permlink in c_list:
                 continue
-            if not c.is_comment():
+
+            if self.mode == "comment":
+                type_match = c.is_comment()
+            elif self.mode == "post":
+                type_match = not c.is_comment()
+            else: # self.mode == "all"
+                type_match = True
+
+            if type_match:
                 if self.keyword is None or self.keyword in c.title:
                     days_done = self.days is not None and not in_recent_n_days(c, self.days)
                     if days_done:

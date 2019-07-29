@@ -6,7 +6,7 @@ import re
 import traceback
 import pandas as pd
 
-from steem.collector import get_posts
+from steem.collector import get_posts, get_comments
 from steem.comment import SteemComment
 from steem.settings import STEEM_HOST, settings
 
@@ -20,6 +20,7 @@ class CommentReader:
 
     def __init__(self, tag="cn", account=None, keyword=None, limit=None, days=None):
         self.posts = []
+        self.comments = []
         self.attributes = [u'title', u'pending_payout_value',
             u'author', u'net_votes', u'created', u'url'
             #, u'body', u'community', u'category', u'authorperm',
@@ -38,8 +39,6 @@ class CommentReader:
         self.folder = ".items/{}".format(first_tag or "by_account")
         self.filename = None
 
-        self.blockchain = Blockchain(mode="head", steem_instance = stm)
-
     def is_recent(self, post, days):
         return in_recent_days(post['created'], days)
 
@@ -51,7 +50,8 @@ class CommentReader:
             if key not in keys:
                 del item[key]
         if u'url' in item:
-            item[u'url'] = STEEM_HOST + item[u'url']
+            if "http" not in item['url']:
+                item[u'url'] = STEEM_HOST + item[u'url']
         else:
             if settings.is_debug():
                 logger.info("the item may have issue: {} with keys: {}".format(item, list(item.keys())))
@@ -75,14 +75,28 @@ class CommentReader:
         else:
             return get_posts(tag=self.tag, account=self.account, keyword=self.keyword, limit=self.limit, days=self.days)
 
-    def query(self):
+    def get_latest_posts(self):
         posts = self._read_posts()
         self.posts = [post for post in posts if self.is_qualified(post)]
         print ("{} posts to review".format(len(self.posts)))
         return self.posts
 
-    def stream(self):
-        pass
+    def _read_comments(self):
+        print ("fetching comments...")
+        if self.tags and len(self.tags) > 0:
+            comments = []
+            for t in self.tags:
+                comments_t = get_comments(tag=t, account=self.account, limit=self.limit, days=self.days)
+                comments = self._merge_posts(comments, comments_t, 'url')
+            return comments
+        else:
+            return get_comments(tag=self.tag, account=self.account, limit=self.limit, days=self.days)
+
+    def get_latest_comments(self):
+        comments = self._read_comments()
+        self.comments = [comment for comment in comments if self.is_qualified(comment)]
+        print ("{} comments to review".format(len(self.comments)))
+        return self.comments
 
     def _get_time_str(self):
         str_time, timestamp = get_cn_time_str()
@@ -94,14 +108,17 @@ class CommentReader:
 
         return "{}-{}".format(name, self._get_time_str())
 
-    def get_filename(self):
+    def get_filename(self, suffix=""):
         if self.filename is not None:
             return self.filename
 
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
 
-        self.filename = "{}/{}.csv".format(self.folder, self.get_name())
+        if len(suffix) > 0:
+            suffix = "_" + suffix
+
+        self.filename = "{}/{}{}.csv".format(self.folder, self.get_name(), suffix)
         return self.filename
 
     def write_posts(self):
@@ -109,6 +126,13 @@ class CommentReader:
         print ("writing posts to CSV:", filename)
         posts = [self.subset(post, self.attributes) for post in self.posts]
         write_json_array_to_csv(posts, filename)
+        return filename
+
+    def write_comments(self):
+        filename = self.get_filename("comments")
+        print ("writing comments to CSV:", filename)
+        comments = [self.subset(comment, self.attributes) for comment in self.comments]
+        write_json_array_to_csv(comments, filename)
         return filename
 
     def send_notification(self):

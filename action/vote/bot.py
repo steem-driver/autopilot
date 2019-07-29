@@ -4,6 +4,7 @@ from utils.logging.logger import logger
 
 import os
 from threading import Timer
+from beem.comment import Comment
 
 from steem.settings import settings
 from steem.comment import SteemComment
@@ -12,6 +13,7 @@ from steem.writer import Writer
 from steem.voter import Voter
 from steem.uploader import Uploader
 from steem.stream import SteemStream
+from steem.collector import query
 
 PILOT_ACCOUNT_KEY = "PILOT_ACCOUNT"
 DEFAULT_PILOT_ACCOUNT = "self-driving"
@@ -19,12 +21,13 @@ DEFAULT_PILOT_ACCOUNT = "self-driving"
 
 class VoteBot:
 
-    def __init__(self, author):
+    def __init__(self, author, mode="stream.comment", config={}):
         self.author = author
         self.writer = Writer(author=self.author)
         self.voter = Voter(author=self.author)
         self.uploader = Uploader(author=self.author)
-        self.stream = SteemStream(operations=["comment"])
+        self.mode = mode
+        self.config = config
 
         # the configuration functions for a vote bot
         self.what_to_vote = None
@@ -125,7 +128,10 @@ class VoteBot:
         author = ops['author']
 
         def perform_vote():
-            c = SteemComment(ops=ops)
+            if isinstance(ops, Comment):
+                c = SteemComment(comment=ops)
+            else:
+                c = SteemComment(ops=ops)
             self.vote(post=c.get_comment())
 
         self.ctx(ops)
@@ -138,4 +144,18 @@ class VoteBot:
                 t.start()
 
     def run(self):
-        self.stream.run(callback=self.watch)
+        if self.mode.startswith("stream."):
+            if self.mode == "stream.comment":
+                stream = SteemStream(operations=["comment"])
+            elif self.mode == "stream.vote":
+                stream = SteemStream(operations=["vote"])
+            stream.run(callback=self.watch)
+        elif self.mode.startswith("query."):
+            if self.mode == "query.comment.post":
+                self.config['mode'] = "post"
+            elif self.mode == "query.comment.comment":
+                self.config['mode'] = "comment"
+            elif self.mode == "query.comment.all":
+                self.config['mode'] = "post+comment"
+            for c in query(self.config):
+                self.watch(c)

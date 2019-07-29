@@ -112,3 +112,6 @@ class SteemOperation:
 
     def get_block_num(self):
         return self.ops['block_num']
+
+    def voter(self):
+        return self.ops['voter']
