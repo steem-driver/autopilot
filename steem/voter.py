@@ -15,7 +15,10 @@ class Voter:
     def upvote(self, post, weight=100):
         if post:
             if weight and weight >= -100 and weight <= 100:
-                post.upvote(weight=weight, voter=self.author)
+                if weight > 0:
+                    post.upvote(weight=weight, voter=self.author)
+                else:
+                    post.downvote(weight=weight, voter=self.author)
                 logger.info("Voted to [{}] successfully".format(post.title))
                 return True
             else:
