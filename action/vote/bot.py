@@ -138,7 +138,7 @@ class VoteBot:
         self.ctx(ops)
         if self.what_to_vote(ops) and self.who_to_vote(author) and self.is_ready():
             delay = self.when_to_vote(ops) # mins
-            if delay and delay >= 0:
+            if delay is not None and delay >= 0:
                 secs = 60.0 * delay
                 logger.info("I'll vote after {} seconds".format(secs))
                 t = Timer(secs, perform_vote)
