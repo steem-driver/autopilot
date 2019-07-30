@@ -15,9 +15,6 @@ from steem.uploader import Uploader
 from steem.stream import SteemStream
 from steem.collector import query
 
-PILOT_ACCOUNT_KEY = "PILOT_ACCOUNT"
-DEFAULT_PILOT_ACCOUNT = "self-driving"
-
 
 class VoteBot:
 
@@ -80,18 +77,8 @@ class VoteBot:
 
     def vote(self, post=None, url=None, weight=None):
         c = SteemComment(comment=post, url=url)
-        receiver = c.get_comment().author
-        title = c.get_comment().title
-
-        if not c.is_upvoted_by(self.author):
-            weight = weight or self.weight(c)
-            success = self.voter.upvote(c.get_comment(), weight=weight)
-            if success:
-                logger.info("I have upvoted @{}'s post [{}] successfully".format(receiver, title))
-                return True
-        else:
-            logger.info("Skip upvote @{} because I already upvoted his/her post [{}]".format(receiver, title))
-        return False
+        weight = weight or self.weight(c)
+        return self.voter.vote(c.get_comment(), weight=weight)
 
     def what(self, what_to_vote):
         """ define the condition of vote for a post """

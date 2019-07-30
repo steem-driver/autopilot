@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 from steem.account import SteemAccount
+from steem.comment import SteemComment
 from utils.logging.logger import logger
 from steem.scot import token_info as scot_token_info, token_config as scot_token_config
 
@@ -12,21 +13,45 @@ class Voter:
         self.account = SteemAccount(self.author)
         self.vp_limit = {}
 
-    def upvote(self, post, weight=100):
+    def vote(self, post, weight=100):
         if post:
             if weight and weight >= -100 and weight <= 100:
                 if weight > 0:
-                    post.upvote(weight=weight, voter=self.author)
+                    if self.has_vp(up=True):
+                        return self._upvote(post, weight)
+                    else:
+                        logger.error("{} has no enough VP for upvote".format(self.author))
                 else:
-                    post.downvote(weight=weight, voter=self.author)
-                logger.info("Voted to [{}] successfully".format(post.title))
-                return True
+                    if self.has_vp(up=False):
+                        return self._downvote(post, weight)
+                    else:
+                        logger.error("{} has no enough VP for downvote".format(self.author))
             else:
                 logger.error("Failed: the vote weight {} exceeds the range [-100, 100]".format(weight))
         return False
 
+    def _upvote(self, post, weight):
+        c = SteemComment(comment=post)
+        if not c.is_upvoted_by(self.author):
+            post.upvote(weight=weight, voter=self.author)
+            logger.info("Upvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
+            return True
+        else:
+            logger.info("Skip upvote because I already upvoted this post [{}]".format(post.title))
+            return False
+
+    def _downvote(self, post, weight):
+        c = SteemComment(comment=post)
+        if not c.is_downvoted_by(self.author):
+            post.downvote(weight=weight, voter=self.author)
+            logger.info("Downvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
+            return True
+        else:
+            logger.info("Skip downvote because I already downvoted this post [{}]".format(post.title))
+            return False
+
     def estimate_vote_value_for_token(self, symbol, weight=100, up=True):
-        token_voting_power = self.account.get_scot_voting_power(symbol)
+        token_voting_power = self.account.get_scot_voting_power(symbol, up)
         scot_staked = self.account.get_scot_staked(symbol)
         multiplier = self.account.get_vote_multiplier(symbol, up)
 
@@ -49,7 +74,7 @@ class Voter:
 
     def estimate_vote_pct_for_token(self, symbol, value):
         up = True if value >= 0 else False
-        token_voting_power = self.account.get_scot_voting_power(symbol)
+        token_voting_power = self.account.get_scot_voting_power(symbol, up)
         scot_staked = self.account.get_scot_staked(symbol)
         multiplier = self.account.get_vote_multiplier(symbol, up)
 
@@ -85,16 +110,16 @@ class Voter:
         else:
             return 0
 
-    def has_vp(self, token=None):
+    def has_vp(self, token=None, up=True):
         if token:
-            vp = self.account.get_scot_voting_power(token)
+            vp = self.account.get_scot_voting_power(token, up)
             if vp:
                 if float(vp) / 100 >= self.get_vp_limit(token):
                     return True
             return False
         else:
             for k, v in self.vp_limit.items():
-                vp = self.account.get_scot_voting_power(k)
+                vp = self.account.get_scot_voting_power(k, up)
                 if not vp or float(vp) / 100 < float(v):
                     return False
             return True

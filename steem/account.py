@@ -100,11 +100,11 @@ class SteemAccount:
                     return token_info[key]
         return None
 
-    def get_scot_voting_power(self, symbol):
-        return self.get_scot_info(symbol, 'voting_power')
+    def get_scot_voting_power(self, symbol, up=True):
+        return self.get_scot_info(symbol, 'voting_power') if up else self.get_scot_info(symbol, 'downvoting_power')
 
     def get_scot_staked(self, symbol):
         return self.get_scot_info(symbol, "staked_tokens")
 
     def get_vote_multiplier(self, symbol, up=True):
-       return self.get_scot_info(symbol, 'vote_weight_multiplier') if up else get_scot_info(symbol, 'downvote_weight_multiplier')
+       return self.get_scot_info(symbol, 'vote_weight_multiplier') if up else self.get_scot_info(symbol, 'downvote_weight_multiplier')

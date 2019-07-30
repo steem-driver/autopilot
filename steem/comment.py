@@ -122,15 +122,15 @@ class SteemComment:
                 has_downvoted = True
         return has_downvoted
 
-    def get_scot_value(self, token, path):
+    def get_scot_value(self, token, item):
         data = scot_comment(self.get_comment().author, self.get_comment().permlink)
         if data:
-            return jmespath.search(token+"."+path, data)
+            return data[token][item]
         else:
             return None
 
     def get_scot_pending_payout(self, token):
-        pending_payout = self.get_scot_value(token, "pending_payout_value")
+        pending_payout = self.get_scot_value(token, "pending_token")
         precision = token_info(token, "precision")
         if pending_payout is not None and precision is not None:
             return float(pending_payout) / pow(10, precision)

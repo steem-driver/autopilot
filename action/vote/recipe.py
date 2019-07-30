@@ -43,7 +43,7 @@ class VoteRecipe:
         return 50
 
     def is_ready(self):
-        return self.voter.has_vp()
+        return True # self.voter.has_vp()
 
     def context(self, ops):
         if isinstance(ops, Comment):
