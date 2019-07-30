@@ -12,6 +12,7 @@ from beem.exceptions import ContentDoesNotExistsException
 from beem.utils import construct_authorperm
 
 from steem.settings import STEEM_HOST
+from steem.scot import comment as scot_comment, token_info
 from utils.logging.logger import logger
 
 
@@ -120,3 +121,18 @@ class SteemComment:
             if vote.voter == account and vote.percent < 0:
                 has_downvoted = True
         return has_downvoted
+
+    def get_scot_value(self, token, path):
+        data = scot_comment(self.get_comment().author, self.get_comment().permlink)
+        if data:
+            return jmespath.search(token+"."+path, data)
+        else:
+            return None
+
+    def get_scot_pending_payout(self, token):
+        pending_payout = self.get_scot_value(token, "pending_payout_value")
+        precision = token_info(token, "precision")
+        if pending_payout is not None and precision is not None:
+            return float(pending_payout) / pow(10, precision)
+        else:
+            return None
