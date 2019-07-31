@@ -167,6 +167,16 @@ class SteemComment:
         else:
             return {}
 
+    def get_payout(self):
+        # steem payout
+        steem_payout = self.get_steem_payout()
+        payout = steem_payout or {}
+        # scot payout
+        tokens = self.get_relevant_tokens()
+        for t in tokens:
+            payout[t] = self.get_scot_payout(t)
+        return payout
+
     def get_relevant_tokens(self):
         data = scot_comment(self.get_comment().author, self.get_comment().permlink)
         if data:
