@@ -129,10 +129,47 @@ class SteemComment:
         else:
             return None
 
+    def _get_payout_with_precision(self, token, payout, precision=None):
+        precision = precision or token_info(token, "precision")
+        if payout is not None and precision is not None:
+            return float(payout) / pow(10, precision)
+        else:
+            return None
+
     def get_scot_pending_payout(self, token):
         pending_payout = self.get_scot_value(token, "pending_token")
-        precision = token_info(token, "precision")
-        if pending_payout is not None and precision is not None:
-            return float(pending_payout) / pow(10, precision)
+        return _get_payout_with_precision(token, pending_payout)
+
+    def get_scot_payout(self, token):
+        total_payout = self.get_scot_value(token, "total_payout_value") or 0
+        curator_payout = self.get_scot_value(token, "curator_payout_value") or 0
+        beneficiaries_payout = self.get_scot_value(token, "beneficiaries_payout_value") or 0
+        author_payout = total_payout - curator_payout
+        precision = self.get_scot_value(token, "precision")
+        return {
+            "total": self._get_payout_with_precision(token, total_payout, precision),
+            "curator": self._get_payout_with_precision(token, curator_payout, precision),
+            "beneficiaries": self._get_payout_with_precision(token, beneficiaries_payout, precision),
+            "author": self._get_payout_with_precision(token, author_payout, precision),
+        }
+
+    def get_steem_payout(self):
+        payout = self.get_comment().get_rewards()
+        steem_payout = {}
+        if payout:
+            for k, v in payout.items():
+                symbol = v['symbol'].upper()
+                if not symbol in steem_payout:
+                    steem_payout[symbol] = {}
+                key = k.replace("_payout", "")
+                steem_payout[symbol][key] = float(v['amount'])
+            return steem_payout
+        else:
+            return {}
+
+    def get_relevant_tokens(self):
+        data = scot_comment(self.get_comment().author, self.get_comment().permlink)
+        if data:
+            return data.keys()
         else:
             return None

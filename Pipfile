@@ -20,6 +20,7 @@ pymongo = {extras = ["tls"],version = "*"}
 dnspython = "*"
 langdetect = "*"
 matplotlib = "*"
+steemengine = "*"
 
 [requires]
 python_version = "3.7"
