@@ -3,6 +3,9 @@
 from utils.logging.logger import logger
 
 import os
+import time
+import random
+import traceback
 from threading import Timer
 from beem.comment import Comment
 
@@ -15,6 +18,8 @@ from steem.uploader import Uploader
 from steem.stream import SteemStream
 from steem.collector import query
 
+MINIMUM_VOTE_INTERVAL = 3 # seconds
+VOTE_RETRIES = 5
 
 class VoteBot:
 
@@ -32,6 +37,8 @@ class VoteBot:
         self.when_to_vote = lambda : 15
         self.how_to_vote = lambda : 50
         self.is_ready = lambda: True
+
+        self.last_vote_timestamp = -1
 
     def _has_reply_comment(self, receiver, message_id):
         comments = self._read_comments()
@@ -75,10 +82,26 @@ class VoteBot:
             logger.info("Skip reply account @{} with [{}] message, because we already reliped before".format(receiver, message_id))
             return False
 
-    def vote(self, post=None, url=None, weight=None):
+    def vote(self, post=None, url=None, weight=None, retries=VOTE_RETRIES):
         c = SteemComment(comment=post, url=url)
-        weight = weight or self.weight(c)
-        return self.voter.vote(c.get_comment(), weight=weight)
+        if retries <= 0:
+            logger.error("Vote {} failed after retries for {} times".format(c.get_url(), VOTE_RETRIES))
+            return False
+
+        if time.time() - self.last_vote_timestamp < MINIMUM_VOTE_INTERVAL:
+            wait_time = round(MINIMUM_VOTE_INTERVAL + random.random() * MINIMUM_VOTE_INTERVAL, 2)
+            logger.info("Sleep {} seconds to avoid voting too frequently.".format(wait_time))
+            time.sleep(wait_time)
+            return self.vote(post, url, weight, retries-1)
+
+        try:
+            weight = weight or self.weight(c)
+            res = self.voter.vote(c.get_comment(), weight=weight)
+            self.last_vote_timestamp = time.time()
+            return res
+        except:
+            logger.error("Failed when voting {} with error: {} . {} retry times left.".format(c.get_url(), traceback.format_exc(), retries-1))
+            return self.vote(post, url, weight, retries-1)
 
     def what(self, what_to_vote):
         """ define the condition of vote for a post """
@@ -125,11 +148,14 @@ class VoteBot:
         self.ctx(ops)
         if self.what_to_vote(ops) and self.who_to_vote(author) and self.is_ready():
             delay = self.when_to_vote(ops) # mins
-            if delay is not None and delay >= 0:
+            if delay is not None and delay > 0:
                 secs = 60.0 * delay
                 logger.info("I'll vote after {} seconds".format(secs))
                 t = Timer(secs, perform_vote)
                 t.start()
+            else:
+                logger.info("I'll vote immediately")
+                perform_vote()
 
     def run(self):
         if self.mode.startswith("stream."):
