@@ -183,3 +183,21 @@ class SteemComment:
             return data.keys()
         else:
             return None
+
+    def is_comment(self):
+        return self.get_comment().is_comment()
+
+    def author(self):
+        return self.get_comment().author
+
+    def body(self):
+        return self.get_comment().body
+
+    def parent_author(self):
+        return self.get_comment().parent_author
+
+    def parent_permlink(self):
+        return self.get_comment().parent_permlink
+
+    def get_parent_author_perm(self):
+        return "@{}/{}".format(self.parent_author(), self.parent_permlink())

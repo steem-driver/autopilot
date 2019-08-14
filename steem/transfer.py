@@ -19,11 +19,14 @@ class SteemTransfer:
     def get_token_transfers(self, token, offset=0, limit=100):
         if self.transfers is None:
             url = URL.format(account=self.account.author, symbol=token, offset=offset, limit=limit)
-            r = requests.get(url)
-            if r.ok:
-                self.transfers = r.json()
-            else:
-                logger.error("Failed when retrieving transfer info")
+            try:
+                r = requests.get(url)
+                if r.ok:
+                    self.transfers = r.json()
+                else:
+                    logger.error("Failed when retrieving transfer info")
+            except:
+                logger.error("Failed when retrieving transfer info. Error: {}".format(traceback.format_exc()))
         return self.transfers
 
     def transfer(self, to, token, amount, memo="", retries=5):
