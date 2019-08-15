@@ -6,7 +6,7 @@ import os
 import time
 import random
 import traceback
-from threading import Timer
+from threading import Thread, Timer
 from beem.comment import Comment
 
 from steem.settings import settings
@@ -39,6 +39,7 @@ class VoteBot:
         self.is_ready = lambda: True
 
         self.last_vote_timestamp = -1
+        self._vote_queue = []
 
     def _has_reply_comment(self, receiver, message_id):
         comments = self._read_comments()
@@ -88,11 +89,12 @@ class VoteBot:
             logger.error("Vote {} failed after retries for {} times".format(c.get_url(), VOTE_RETRIES))
             return False
 
-        if time.time() - self.last_vote_timestamp < MINIMUM_VOTE_INTERVAL:
-            wait_time = round(MINIMUM_VOTE_INTERVAL + random.random() * MINIMUM_VOTE_INTERVAL, 2)
+        while time.time() - self.last_vote_timestamp < MINIMUM_VOTE_INTERVAL:
+            wait_time = round(MINIMUM_VOTE_INTERVAL + random.random() * MINIMUM_VOTE_INTERVAL * 0.2, 2)
             logger.info("Sleep {} seconds to avoid voting too frequently.".format(wait_time))
             time.sleep(wait_time)
-            return self.vote(post, url, weight, retries-1)
+            if time.time() - self.last_vote_timestamp >= MINIMUM_VOTE_INTERVAL:
+                return self.vote(post, url, weight, retries-1)
 
         try:
             weight = weight or self.weight(c)
@@ -102,6 +104,22 @@ class VoteBot:
         except:
             logger.error("Failed when voting {} with error: {} . {} retry times left.".format(c.get_url(), traceback.format_exc(), retries-1))
             return self.vote(post, url, weight, retries-1)
+
+    def start_vote_queue(self):
+        logger.info("Start Vote Queue...")
+
+        def wait_for_vote():
+            while True:
+                while(len(self._vote_queue) > 0):
+                    post = self._vote_queue.pop(0)
+                    self.vote(post)
+                time.sleep(1)
+            logger.info("Vote Queue Stopped.")
+
+        Thread(target=wait_for_vote).start()
+
+    def append_to_vote_queue(self, post):
+        self._vote_queue.append(post)
 
     def what(self, what_to_vote):
         """ define the condition of vote for a post """
@@ -143,7 +161,7 @@ class VoteBot:
                 c = SteemComment(comment=ops)
             else:
                 c = SteemComment(ops=ops)
-            self.vote(post=c.get_comment())
+            self.append_to_vote_queue(post=c.get_comment())
 
         self.ctx(ops)
         if self.what_to_vote(ops) and self.who_to_vote(author) and self.is_ready():
@@ -158,6 +176,7 @@ class VoteBot:
                 perform_vote()
 
     def run(self):
+        self.start_vote_queue()
         if self.mode.startswith("stream."):
             if self.mode == "stream.comment":
                 stream = SteemStream(operations=["comment"])
