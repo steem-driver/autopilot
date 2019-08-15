@@ -58,8 +58,8 @@ class Settings:
                 self.steem_db_inst = SteemDatabase(PRODUCTION_DATABASE)
         return self.steem_db_inst
 
-    def set_steem_node(self, node=None):
-        if self.steem_instance is None:
+    def set_steem_node(self, node=None, overwrite=False):
+        if self.steem_instance is None or overwrite:
             # print(shared_steem_instance().get_config())
             api_node = node or self.get_env_var('API_NODE') or STEEM_API_NODES[1]
             if self.is_debug():

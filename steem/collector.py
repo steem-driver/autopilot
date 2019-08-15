@@ -4,12 +4,15 @@ import pandas as pd
 import traceback
 import json
 import types
+import time
 
 from beem.account import Account
 from beem.comment import Comment
 from beem.discussions import Query, Discussions_by_created, Comment_discussions_by_payout
 
 from steem.comment import SteemComment
+from steem.operation import SteemOperation
+from steem.stream import SteemStream
 from steem.settings import settings
 from utils.logging.logger import logger
 from utils.system.date import in_recent_days
@@ -25,23 +28,28 @@ def query(q={}):
     limit = q.get("limit", None)
     days = q.get("days", None)
     receiver = q.get("receiver", None)
+    stream = q.get("stream", False)
 
     if mode == "post":
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream)
     elif mode == "comment":
-        return get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days)
+        return get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     elif "post" in mode and "comment" in mode:
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     return []
 
-def get_posts(account=None, tag=None, keyword=None, limit=None, days=None):
-    if account:
+def get_posts(account=None, tag=None, keyword=None, limit=None, days=None, stream=False):
+    if stream:
+        return SteemPostsByStream(tag=tag, account=account, keyword=None, limit=limit, days=days, mode="post").read_posts()
+    elif account:
         return SteemPostsByAccount(account=account, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
     elif tag and not account:
         return SteemPostsByTag(tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
 
-def get_comments(account=None, tag=None, receiver=None, limit=None, days=None):
-    if account:
+def get_comments(account=None, tag=None, receiver=None, limit=None, days=None, stream=False):
+    if stream:
+        return SteemPostsByStream(tag=tag, account=account, keyword=None, limit=limit, days=days, mode="comment").read_posts()
+    elif account:
         return SteemCommentsByAccount(account=account, receiver=receiver, limit=limit, days=days).read_comments()
     elif tag and not account:
         return SteemPostsByTag(tag=tag, keyword=None, limit=limit, days=days, mode="comment").read_posts()
@@ -235,3 +243,58 @@ class SteemCommentsByAccount:
         print ('{} comments are fetched'.format(len(comments)))
         return comments
 
+
+
+class SteemPostsByStream:
+
+    def __init__(self, tag, account=None, keyword=None, limit=None, days=None, mode="post"):
+        self.username = account
+        self.tag = tag
+        self.keyword = keyword #and keyword.decode('utf-8')
+        self.limit = int(limit) if limit else None
+        self.days = float(days) if days else None
+        self.mode = mode or "post"
+        self.stream = SteemStream(operations=["comment"])
+
+    def read_posts(self):
+        c_list = {}
+        posts = []
+
+        def filter_post(ops):
+            count = len(c_list.keys()) + 1
+            print ("operations: {}".format(count), end="\r", flush=True)
+
+            if ops['trx_id'] in c_list:
+                return
+
+            c_list[ops['trx_id']] = 1
+            c = SteemOperation(ops)
+
+            if self.mode == "comment":
+                type_match = c.is_comment()
+            elif self.mode == "post":
+                type_match = not c.is_comment()
+            else: # self.mode == "all"
+                type_match = True
+
+            if type_match:
+                tags = c.get_tags()
+                if self.tag is None or self.tag in tags:
+                    if self.username is None or c.author() == self.username:
+                        if self.keyword is None or self.keyword in c.title():
+                            # sc = SteemComment(ops=ops)
+                            c.log()
+                            posts.append(ops)
+
+        start = time.time()
+        self.stream.run(callback=filter_post, days=self.days)
+        elapsed = time.time() - start
+
+        print ("{} transactions are processed in {:.2f}s".format(len(c_list.keys()), elapsed))
+        print ('{} posts are fetched'.format(len(posts)))
+        return posts
+
+
+# alternative ways of fetching comments:
+# find every post in the tag, then get all replies for every post.
+# comments only take the first tag of the post as their own, other tags are ignored for the comments.

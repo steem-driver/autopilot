@@ -37,7 +37,7 @@ class Voter:
             logger.info("Upvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
             return True
         else:
-            logger.info("Skip upvote because I already upvoted this post [{}]".format(post.title))
+            logger.info("Skip upvote because I already upvoted this post [{}]  [{}]".format(post.title, c.get_url()))
             return False
 
     def _downvote(self, post, weight):
@@ -47,7 +47,7 @@ class Voter:
             logger.info("Downvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
             return True
         else:
-            logger.info("Skip downvote because I already downvoted this post [{}]".format(post.title))
+            logger.info("Skip downvote because I already downvoted this post [{}] [{}]".format(post.title, c.get_url()))
             return False
 
     def estimate_vote_value_for_token(self, symbol, weight=100, up=True):

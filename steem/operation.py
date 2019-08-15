@@ -90,7 +90,11 @@ class SteemOperation:
         return False
 
     def log(self):
-        pass
+        if self.ops['type'] == "comment":
+            logger.info("@%s | %s | %s | %s" % (self.author(), self.title(), self.get_url(), self.ops['timestamp']))
+
+    def title(self):
+        return self.ops['title']
 
     def body(self):
         return self.ops['body']
