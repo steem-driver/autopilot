@@ -46,12 +46,18 @@ class SteemStream:
                 for ops in self.blockchain.stream(opNames=self.operations,
                             start=start_block, stop=stop_block,
                             max_batch_size=self.max_batch_size, threading=self.threading, thread_num=8):
-                    callback(ops)
+                    try:
+                        callback(ops)
+                    except:
+                        logger.error("Failed when procssing operation {} with error: {}".format(ops, traceback.format_exc()))
             else:
                 logger.info("Streaming for operations {} has started from the latest blocks".format(self.operations))
                 for ops in self.blockchain.stream(opNames=self.operations,
                             max_batch_size=self.max_batch_size, threading=self.threading, thread_num=8):
-                    callback(ops)
+                    try:
+                        callback(ops)
+                    except:
+                        logger.error("Failed when procssing operation {} with error: {}".format(ops, traceback.format_exc()))
         except:
             logger.error("Failed when streaming operations {} with error: {}".format(self.operations, traceback.format_exc()))
 

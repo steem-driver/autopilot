@@ -64,18 +64,23 @@ class SteemOperation:
 
         return text
 
-    def get_tags(self):
+    def get_metadata(self):
         if 'json_metadata' in self.ops and len(self.ops['json_metadata']) > 0:
             metadata = json.loads(self.ops['json_metadata'])
-            if 'tags' in metadata:
-                if isinstance(metadata, dict):
-                    tags = metadata['tags']
-                    if isinstance(tags, list):
-                        return tags
-                    else:
-                        return [tags]
-                else:
-                    logger.error("not well formatted metadata: ".format(self.ops['json_metadata']))
+            if metadata and isinstance(metadata, dict):
+                return metadata
+            else:
+                logger.error("not well formatted metadata: ".format(self.ops['json_metadata']))
+        return None
+
+    def get_tags(self):
+        metadata = self.get_metadata()
+        if metadata and 'tags' in metadata:
+            tags = metadata['tags']
+            if isinstance(tags, list):
+                return tags
+            else:
+                return [tags]
         return []
 
     def has_tag(self, tag):
@@ -88,6 +93,15 @@ class SteemOperation:
             if self.has_tag(tag):
                 return True
         return False
+
+    def get_app(self):
+        metadata = self.get_metadata()
+        if metadata and 'app' in metadata:
+            return metadata['app']
+        return ""
+
+    def is_app(self, app):
+        return app is not None and app.lower() in self.get_app().lower()
 
     def log(self):
         if self.ops['type'] == "comment":

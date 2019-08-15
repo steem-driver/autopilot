@@ -208,3 +208,6 @@ class SteemComment:
 
     def get_parent_author_perm(self):
         return "@{}/{}".format(self.parent_author(), self.parent_permlink())
+
+    def get_beneficiaries(self):
+        return self.get_comment().get_beneficiaries_pct()
