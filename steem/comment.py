@@ -209,5 +209,11 @@ class SteemComment:
     def get_parent_author_perm(self):
         return "@{}/{}".format(self.parent_author(), self.parent_permlink())
 
-    def get_beneficiaries(self):
-        return self.get_comment().get_beneficiaries_pct()
+    def get_beneficiaries(self, account=None):
+        if account is None:
+            return self.get_comment()["beneficiaries"]
+        else:
+            for b in self.get_comment()["beneficiaries"]:
+                if b['account'] == account:
+                    return b['weight'] / 100
+            return 0
