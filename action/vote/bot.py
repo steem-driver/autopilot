@@ -37,6 +37,7 @@ class VoteBot:
         self.when_to_vote = lambda : 15
         self.how_to_vote = lambda : 50
         self.is_ready = lambda: True
+        self.after_success = lambda : True
 
         self.last_vote_timestamp = -1
         self._vote_queue = []
@@ -96,14 +97,17 @@ class VoteBot:
             if time.time() - self.last_vote_timestamp >= MINIMUM_VOTE_INTERVAL:
                 return self.vote(post, url, weight, retries-1)
 
+        success = False
         try:
             weight = weight or self.weight(c)
-            res = self.voter.vote(c.get_comment(), weight=weight)
+            success = self.voter.vote(c.get_comment(), weight=weight)
             self.last_vote_timestamp = time.time()
-            return res
         except:
             logger.error("Failed when voting {} with error: {} . {} retry times left.".format(c.get_url(), traceback.format_exc(), retries-1))
             return self.vote(post, url, weight, retries-1)
+
+        self.after_success(success)
+        return success
 
     def start_vote_queue(self):
         logger.info("Start Vote Queue...")
@@ -144,6 +148,11 @@ class VoteBot:
     def ready(self, is_ready):
         """ define voter has met energy or other requirements """
         self.is_ready = is_ready
+        return self
+
+    def done(self, after_success):
+        """ define the callback after vote is completed successfully """
+        self.after_success = after_success
         return self
 
     def context(self, ctx):

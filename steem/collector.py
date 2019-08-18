@@ -5,6 +5,8 @@ import traceback
 import json
 import types
 import time
+from datetime import datetime
+import pytz
 
 from beem.account import Account
 from beem.comment import Comment
@@ -13,6 +15,7 @@ from beem.discussions import Query, Discussions_by_created, Comment_discussions_
 from steem.comment import SteemComment
 from steem.operation import SteemOperation
 from steem.stream import SteemStream
+from steem.scot import get_discussions
 from steem.settings import settings
 from utils.logging.logger import logger
 from utils.system.date import in_recent_days
@@ -29,18 +32,21 @@ def query(q={}):
     days = q.get("days", None)
     receiver = q.get("receiver", None)
     stream = q.get("stream", False)
+    token = q.get("token", None)
 
     if mode == "post":
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token)
     elif mode == "comment":
         return get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     elif "post" in mode and "comment" in mode:
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     return []
 
-def get_posts(account=None, tag=None, keyword=None, limit=None, days=None, stream=False):
+def get_posts(account=None, tag=None, keyword=None, limit=None, days=None, stream=False, token=None):
     if stream:
         return SteemPostsByStream(tag=tag, account=account, keyword=None, limit=limit, days=days, mode="post").read_posts()
+    elif token:
+        return SteemPostsByToken(token=token, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
     elif account:
         return SteemPostsByAccount(account=account, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
     elif tag and not account:
@@ -55,7 +61,11 @@ def get_comments(account=None, tag=None, receiver=None, limit=None, days=None, s
         return SteemPostsByTag(tag=tag, keyword=None, limit=limit, days=days, mode="comment").read_posts()
 
 def in_recent_n_days(post, n):
-    return in_recent_days(post['created'], n)
+    if isinstance(post['created'], str):
+        created = datetime.strptime(post['created'], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=pytz.UTC)
+    else:
+        created = post['created']
+    return in_recent_days(created, n)
 
 
 class SteemPostsByAccount:
@@ -205,7 +215,43 @@ class SteemPostsByTag:
             "days_done": days_done
         }
 
+class SteemPostsByToken(SteemPostsByTag):
 
+    def __init__(self, token, tag=None, keyword=None, limit=None, days=None, mode="token"):
+        super().__init__(tag, keyword, limit, days, mode)
+        self.token = token
+
+    def read_posts_with_limit(self, limit, last_post=None):
+        posts = []
+
+        if last_post:
+            blogs = get_discussions("created", token=self.token, limit=limit, start_author=last_post['author'], start_permlink=last_post['permlink'])
+        else:
+            blogs = get_discussions("created", token=self.token, limit=limit)
+
+        logger.info ('reading posts: {}'.format(len(blogs)))
+
+        c_list = {}
+        days_done = False
+        for ops in blogs:
+            c = SteemOperation(ops)
+            if ops['authorperm'] in c_list:
+                continue
+
+            tags = c.get_tags()
+            if self.tag is None or self.tag in tags:
+                if self.keyword is None or self.keyword in c.title():
+                    days_done = self.days is not None and not in_recent_n_days(ops, self.days)
+                    if days_done:
+                        break
+                    else:
+                        c.log(scot=True)
+                        c_list[ops['authorperm']] = 1
+                        posts.append(ops)
+        return {
+            "posts": posts,
+            "days_done": days_done
+        }
 
 class SteemCommentsByAccount:
 

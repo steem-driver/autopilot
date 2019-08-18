@@ -14,12 +14,18 @@ cached = {
     "comment": {}
 }
 
-def _http_api(path):
-    r = requests.get(SCOT_API_URL.format(path))
-    if r.ok:
-        return r.json()
-    else:
-        return None
+def _http_api(path, retries=5):
+    try:
+        r = requests.get(SCOT_API_URL.format(path))
+        if r.ok:
+            return r.json()
+        else:
+            return None
+    except:
+        if retries > 0:
+            return _http_api(path, retries-1)
+        else:
+            return None
 
 def _entity_data(key, entity):
     if entity is not None:
@@ -69,3 +75,15 @@ def token_info(symbol, item=None):
 
 def token_config(symbol, item=None):
     return _token_item("config", symbol, item)
+
+def get_discussions(mode="created", token=None, tag=None, limit=-1, start_author=None, start_permlink=None):
+    params = ""
+    if tag:
+        params += "&tag={}".format(tag)
+    if limit and limit > 0:
+        params += "&limit={}".format(limit)
+    if start_author:
+        params += "&start_author={}".format(start_author)
+    if start_permlink:
+        params += "&start_permlink={}".format(start_permlink)
+    return _http_api("get_discussions_by_{}?token={}{}".format(mode, token, params))

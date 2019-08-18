@@ -3,6 +3,7 @@
 import re
 import html
 import json
+import traceback
 
 from bs4 import BeautifulSoup
 from markdown import markdown
@@ -66,11 +67,14 @@ class SteemOperation:
 
     def get_metadata(self):
         if 'json_metadata' in self.ops and len(self.ops['json_metadata']) > 0:
-            metadata = json.loads(self.ops['json_metadata'])
-            if metadata and isinstance(metadata, dict):
-                return metadata
-            else:
-                logger.debug("not well formatted metadata: ".format(self.ops['json_metadata']))
+            try:
+                metadata = json.loads(self.ops['json_metadata'])
+                if metadata and isinstance(metadata, dict):
+                    return metadata
+                else:
+                    logger.debug("not well formatted metadata: ".format(self.ops['json_metadata']))
+            except:
+                logger.debug("failed when parsing metadata. Error: {}".format(traceback.format_exc()))
         return None
 
     def get_tags(self):
@@ -103,8 +107,10 @@ class SteemOperation:
     def is_app(self, app):
         return app is not None and app.lower() in str(self.get_app()).lower()
 
-    def log(self):
-        if self.ops['type'] == "comment":
+    def log(self, scot=False):
+        if scot:
+            logger.info("@%s | %s | %s | %s" % (self.author(), self.title(), self.get_url(), self.ops['created']))
+        if 'type' in self.ops and self.ops['type'] == "comment":
             logger.info("@%s | %s | %s | %s" % (self.author(), self.title(), self.get_url(), self.ops['timestamp']))
 
     def title(self):

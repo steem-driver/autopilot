@@ -34,7 +34,7 @@ class Voter:
         c = SteemComment(comment=post)
         if not c.is_upvoted_by(self.author):
             post.upvote(weight=weight, voter=self.author)
-            logger.info("Upvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
+            logger.info("Upvoted to [{}] [{}] with weight [{:.2f}] successfully".format(post.title, c.get_url(), weight))
             return True
         else:
             logger.info("Skip upvote because I already upvoted this post [{}]  [{}]".format(post.title, c.get_url()))
@@ -44,7 +44,7 @@ class Voter:
         c = SteemComment(comment=post)
         if not c.is_downvoted_by(self.author):
             post.downvote(weight=weight, voter=self.author)
-            logger.info("Downvoted to [{}] [{}] successfully".format(post.title, c.get_url()))
+            logger.info("Downvoted to [{}] [{}] with weight [{:.2f}] successfully".format(post.title, c.get_url(), weight))
             return True
         else:
             logger.info("Skip downvote because I already downvoted this post [{}] [{}]".format(post.title, c.get_url()))
@@ -124,4 +124,6 @@ class Voter:
                     return False
             return True
 
-
+    def estimate_vote_pct_for_n_votes(self, days, n):
+        total_SBD = self.account.account.steem.sp_to_sbd(sp=self.account.steem_power()) * 10 * float(days)
+        return float(self.account.account.get_vote_pct_for_SBD(total_SBD / n)) / 100

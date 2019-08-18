@@ -45,6 +45,9 @@ class VoteRecipe:
     def is_ready(self):
         return True # self.voter.has_vp()
 
+    def after_success(self):
+        return True
+
     def context(self, ops):
         if isinstance(ops, Comment):
             self.ops = SteemComment(comment=ops)
@@ -53,4 +56,4 @@ class VoteRecipe:
         logger.debug("watch operation: {}; tags: {}".format(self.ops.get_url(), self.ops.get_tags()))
 
     def run(self):
-        self.bot.context(self.context).what(self.what_to_vote).who(self.who_to_vote).ready(self.is_ready).when(self.when_to_vote).how(self.how_to_vote).run()
+        self.bot.context(self.context).what(self.what_to_vote).who(self.who_to_vote).ready(self.is_ready).when(self.when_to_vote).how(self.how_to_vote).done(self.after_success).run()
