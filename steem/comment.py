@@ -197,6 +197,9 @@ class SteemComment:
     def author(self):
         return self.get_comment().author
 
+    def title(self):
+        return self.get_comment().title
+
     def body(self):
         return self.get_comment().body
 

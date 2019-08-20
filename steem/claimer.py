@@ -49,6 +49,8 @@ class Claimer:
                 logger.info("@{} has claimed all tokens successfully".format(self.author))
             except:
                 logger.error("Failed when @{} was claiming all token.\nError: {}".format(self.author, traceback.format_exc()))
+                # clear the transaction buffer to avoid impacting the next transaction
+                self.steem.clear()
         else:
             logger.info("@{} has no tokens to claim.".format(self.author))
 
