@@ -13,6 +13,7 @@ class SteemAccount:
         self.account = Account(self.author)
         self.rc = None
         self.scot_info = None
+        self.followings = None
 
     def get_profile(self, key=None):
         profile = self.account.profile
@@ -108,3 +109,14 @@ class SteemAccount:
 
     def get_vote_multiplier(self, symbol, up=True):
        return self.get_scot_info(symbol, 'vote_weight_multiplier') if up else self.get_scot_info(symbol, 'downvote_weight_multiplier')
+
+    def get_followings(self):
+        if self.followings is None:
+            self.followings = self.account.get_following()
+        return self.followings
+
+    def follow(self, other):
+        followings = self.get_followings()
+        if not other in followings:
+            self.account.follow(other)
+            self.followings.append(other)

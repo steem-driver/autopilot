@@ -34,6 +34,7 @@ class InfoBot:
         self.title = lambda : None
         self.body = lambda : None
         self.tags = lambda: None
+        self.ready = lambda: True
 
     def _has_reply_comment(self, receiver, message_id):
         comments = self._read_comments()
@@ -129,9 +130,14 @@ class InfoBot:
         self.tags = tags
         return self
 
+    def is_ready(self, ready):
+        self.ready = ready
+        return self
+
     def run(self):
         data = self.data()
         title = self.title(data)
         body = self.body(data)
         tags = self.tags(data)
-        self.publish(title, body, tags)
+        if self.ready(data):
+            self.publish(title, body, tags)

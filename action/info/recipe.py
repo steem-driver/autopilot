@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+from steem.collector import query
 from action.info.bot import InfoBot
 from utils.logging.logger import logger
 
@@ -12,7 +13,7 @@ class InfoRecipe:
         self.ctx = {}
 
     def mode(self):
-        return "query.vote.downvote"
+        return "query.comment.post"
 
     def by(self):
         return None
@@ -24,7 +25,17 @@ class InfoRecipe:
         return {}
 
     def data(self):
-        return None
+        mode = self.mode()
+        config = self.config()
+        if mode.startswith("query."):
+            if mode == "query.comment.post":
+                config['mode'] = "post"
+            elif mode == "query.comment.comment":
+                config['mode'] = "comment"
+            elif mode == "query.comment.all":
+                config['mode'] = "post+comment"
+            return query(config)
+        return []
 
     def title(self, data):
         return None
@@ -34,6 +45,9 @@ class InfoRecipe:
 
     def tags(self, data):
         return None
+
+    def ready(self, data):
+        return True
 
     # def when_to_post(self, post):
     #     return 0
@@ -46,4 +60,4 @@ class InfoRecipe:
     #     logger.debug("watch operation: {}; tags: {}".format(self.ops.get_url(), self.ops.get_tags()))
 
     def run(self):
-        self.bot.get_data(self.data).get_title(self.title).get_body(self.body).get_tags(self.tags).run()
+        self.bot.get_data(self.data).get_title(self.title).get_body(self.body).get_tags(self.tags).is_ready(self.ready).run()

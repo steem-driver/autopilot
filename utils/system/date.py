@@ -25,3 +25,12 @@ def get_cn_time_str():
     timestamp = int(1000 * time.time())
 
     return str_time, timestamp
+
+def get_zh_time_str():
+    # get timezone
+    tz = pytz.timezone(pytz.country_timezones('cn')[0])
+    return datetime.now(tz).strftime('%Y年%m月%d日')  # '%Y-%m-%d_(%H_%M_%S)'
+
+def get_utc_date_str():
+    # get timezone
+    return datetime.now(pytz.utc).strftime('%Y-%m-%d')

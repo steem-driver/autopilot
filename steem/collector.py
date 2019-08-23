@@ -33,22 +33,23 @@ def query(q={}):
     receiver = q.get("receiver", None)
     stream = q.get("stream", False)
     token = q.get("token", None)
+    reblog = q.get("reblog", False)
 
     if mode == "post":
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token, reblog=reblog)
     elif mode == "comment":
         return get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     elif "post" in mode and "comment" in mode:
-        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
+        return get_posts(account=account, tag=tag, keyword=keyword, limit=limit, days=days, stream=stream, token=token, reblog=reblog) + get_comments(account=account, tag=tag, receiver=receiver, limit=limit, days=days, stream=stream)
     return []
 
-def get_posts(account=None, tag=None, keyword=None, limit=None, days=None, stream=False, token=None):
+def get_posts(account=None, tag=None, keyword=None, limit=None, days=None, stream=False, token=None, reblog=False):
     if stream:
         return SteemPostsByStream(tag=tag, account=account, keyword=None, limit=limit, days=days, mode="post").read_posts()
     elif token:
         return SteemPostsByToken(token=token, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
     elif account:
-        return SteemPostsByAccount(account=account, tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
+        return SteemPostsByAccount(account=account, tag=tag, keyword=keyword, limit=limit, days=days, reblog=reblog).read_posts()
     elif tag and not account:
         return SteemPostsByTag(tag=tag, keyword=keyword, limit=limit, days=days).read_posts()
 
@@ -60,23 +61,25 @@ def get_comments(account=None, tag=None, receiver=None, limit=None, days=None, s
     elif tag and not account:
         return SteemPostsByTag(tag=tag, keyword=None, limit=limit, days=days, mode="comment").read_posts()
 
-def in_recent_n_days(post, n):
-    if isinstance(post['created'], str):
-        created = datetime.strptime(post['created'], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=pytz.UTC)
+def in_recent_n_days(post, n, reblog=False):
+    key = "reblogged" if reblog else "created"
+    if isinstance(post[key], str):
+        created = datetime.strptime(post[key], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=pytz.UTC)
     else:
-        created = post['created']
+        created = post[key]
     return in_recent_days(created, n)
 
 
 class SteemPostsByAccount:
 
-    def __init__(self, account, tag=None, keyword=None, limit=None, days=None):
+    def __init__(self, account, tag=None, keyword=None, limit=None, days=None, reblog=False):
         self.username = account
         self.account = Account(account)
         self.tag = tag
         self.keyword = keyword # and keyword.decode('utf-8')
         self.limit = int(limit) if limit else None
         self.days = float(days) if days else None
+        self.reblog = reblog or False
         self.total = None
 
     def get_total(self):
@@ -88,28 +91,44 @@ class SteemPostsByAccount:
         c_list = {}
         posts = []
 
-        if self.limit:
+        if self.reblog:
+            blogs = self.account.history_reverse(only_ops=["custom_json"])
+        elif self.limit:
             blogs = self.account.get_blog(start_entry_id=start, limit=self.limit)
         else:
-            blogs = self.account.blog_history(start=start, limit=self.limit, reblogs=False)
+            blogs = self.account.blog_history(start=start, limit=self.limit, reblogs=self.reblog)
 
         days_done = False
         for c in blogs:
-            if c.permlink in c_list:
+            if self.reblog:
+                if c['id'] == "follow":
+                    json_data = json.loads(c['json'])
+                    if len(json_data) > 0 and json_data[0] == "reblog":
+                        info = json_data[1]
+                        authorperm = "@{}/{}".format(info["author"], info["permlink"])
+                        timestamp = c["timestamp"]
+                        c = Comment(authorperm)
+                        c["reblogged"] = timestamp
+                    else:
+                        continue
+                else:
+                    continue
+            if c.authorperm in c_list:
                 continue
-            if not c.is_comment() and c.author == self.username:
-                sc = SteemComment(comment=c)
-                tags = sc.get_tags()
-                if self.tag is None or self.tag in tags:
-                    if self.keyword is None or self.keyword in c.title:
-                        days_done = self.days is not None and not in_recent_n_days(c, self.days)
-                        if days_done:
-                            break
-                        else:
-                            c = sc.refresh()
-                            sc.log()
-                            c_list[c.permlink] = 1
-                            posts.append(c)
+            if not c.is_comment():
+                if ((not self.reblog) and c.author == self.username) or (self.reblog and c.author != self.username):
+                    sc = SteemComment(comment=c)
+                    tags = sc.get_tags()
+                    if self.tag is None or self.tag in tags:
+                        if self.keyword is None or self.keyword in c.title:
+                            days_done = self.days is not None and not in_recent_n_days(c, self.days, self.reblog)
+                            if days_done:
+                                break
+                            else:
+                                c = sc.refresh()
+                                sc.log()
+                                c_list[c.authorperm] = 1
+                                posts.append(c)
 
         print ('{} posts are fetched'.format(len(posts)))
         return posts
